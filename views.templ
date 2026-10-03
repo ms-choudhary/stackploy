@@ -1,0 +1,121 @@
+package main
+
+import "fmt"
+
+templ layout(title string) {
+	<!DOCTYPE html>
+	<html lang="en">
+		<head>
+			<meta charset="utf-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<title>{ title } · stackploy</title>
+			<link rel="stylesheet" href="/static/style.css"/>
+			<script src="/static/htmx.min.js"></script>
+		</head>
+		<body>
+			<nav>
+				<strong>stackploy</strong>
+				<a href="/stacks">Stacks</a>
+				<a href="/environments">Environments</a>
+			</nav>
+			<main>
+				{ children... }
+			</main>
+		</body>
+	</html>
+}
+
+templ EnvironmentsPage(envs []Environment) {
+	@layout("Environments") {
+		<h1>Environments</h1>
+		<table>
+			<tr><th>Name</th><th>Docker host</th><th></th></tr>
+			for _, e := range envs {
+				<tr>
+					<td>{ e.Name }</td>
+					<td><code>{ e.DockerHost }</code></td>
+					<td>
+						<button hx-post={ fmt.Sprintf("/environments/%d/test", e.ID) } hx-target={ fmt.Sprintf("#test-%d", e.ID) }>Test</button>
+						<span id={ fmt.Sprintf("test-%d", e.ID) }></span>
+					</td>
+				</tr>
+			}
+		</table>
+		<h2>Add environment</h2>
+		<form method="post" action="/environments">
+			<label>Name <input name="name" required placeholder="raspi-01"/></label>
+			<label>Docker host <input name="docker_host" required placeholder="ssh://msc@raspi-01/run/user/1000/podman/podman.sock"/></label>
+			<button>Add</button>
+		</form>
+	}
+}
+
+templ TestResult(out string, ok bool) {
+	if ok {
+		<span class="deployed">✓ { out }</span>
+	} else {
+		<span class="failed">✗ { out }</span>
+	}
+}
+
+templ NewStackPage(envs []Environment) {
+	@layout("New stack") {
+		<h1>New stack</h1>
+		<form method="post" action="/stacks">
+			<label>Name <input name="name" required pattern="[a-z0-9][a-z0-9_-]*" placeholder="whoami"/></label>
+			<label>
+				Environment
+				<select name="environment_id" required>
+					for _, e := range envs {
+						<option value={ fmt.Sprint(e.ID) }>{ e.Name }</option>
+					}
+				</select>
+			</label>
+			<label>Repository URL <input name="repo_url" required placeholder="https://github.com/you/homelab"/></label>
+			<label>Branch <input name="branch" required value="main"/></label>
+			<label>Compose path <input name="compose_path" required value="compose.yaml"/></label>
+			<fieldset>
+				<legend>Environment variables</legend>
+				<div id="env-rows"></div>
+				<button type="button" hx-get="/stacks/env-row" hx-target="#env-rows" hx-swap="beforeend">+ Add variable</button>
+			</fieldset>
+			<button>Deploy</button>
+		</form>
+	}
+}
+
+templ EnvRow() {
+	<div class="row">
+		<input name="env_key" placeholder="KEY" required/>
+		<input name="env_value" placeholder="value"/>
+		<button type="button" hx-on:click="this.parentElement.remove()">✕</button>
+	</div>
+}
+
+templ StackPage(s Stack) {
+	@layout(s.Name) {
+		<h1>{ s.Name } <span class={ s.Status }>{ s.Status }</span></h1>
+		<p>
+			<code>{ s.RepoURL }</code> { "@" } <code>{ s.Branch }</code> · <code>{ s.ComposePath }</code> → { s.Environment }
+		</p>
+		<pre>{ s.Output }</pre>
+	}
+}
+
+templ StacksPage(stacks []Stack) {
+	@layout("Stacks") {
+		<h1>Stacks</h1>
+		<p><a href="/stacks/new">+ New stack</a></p>
+		<table>
+			<tr><th>Name</th><th>Environment</th><th>Status</th><th>Created</th></tr>
+			for _, s := range stacks {
+				<tr>
+					<td><a href={ templ.SafeURL(fmt.Sprintf("/stacks/%d", s.ID)) }>{ s.Name }</a></td>
+					<td>{ s.Environment }</td>
+					<td class={ s.Status }>{ s.Status }</td>
+					<td>{ s.CreatedAt.Format("2006-01-02 15:04") }</td>
+				</tr>
+			}
+		</table>
+	}
+}

@@ -1,0 +1,13 @@
+services:
+  stackploy:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+    volumes:
+      - stackploy-data:/data
+
+volumes:
+  stackploy-data:

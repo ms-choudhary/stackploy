@@ -1,0 +1,4 @@
+data/
+stackploy
+*_templ.go
+.git/

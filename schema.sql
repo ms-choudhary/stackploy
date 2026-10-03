@@ -1,0 +1,18 @@
+CREATE TABLE IF NOT EXISTS environments (
+	id INTEGER PRIMARY KEY,
+	name TEXT NOT NULL UNIQUE,
+	docker_host TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS stacks (
+	id INTEGER PRIMARY KEY,
+	name TEXT NOT NULL UNIQUE,
+	environment_id INTEGER NOT NULL REFERENCES environments(id),
+	repo_url TEXT NOT NULL,
+	branch TEXT NOT NULL,
+	compose_path TEXT NOT NULL,
+	env_json TEXT NOT NULL DEFAULT '{}',
+	status TEXT NOT NULL DEFAULT 'deploying',
+	output TEXT NOT NULL DEFAULT '',
+	created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
